@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 interface BlogPostCardProps {
   post: {
@@ -39,8 +40,9 @@ export function BlogPostCard({ post }: BlogPostCardProps) {
     .slice(0, 160);
 
   // featured_image returns full URL from Magento; fallback to first_image
-  const imageUrl =
-    post.featured_list_image || post.featured_image || post.first_image;
+  const imageUrl = proxyMagentoImage(
+    post.featured_list_image || post.featured_image || post.first_image,
+  );
 
   return (
     <Link

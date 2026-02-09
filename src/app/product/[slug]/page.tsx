@@ -21,6 +21,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { formatPrice } from "@/lib/formatPrice";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://technimark.com";
 
@@ -44,7 +45,7 @@ export async function generateMetadata({
     const product = data.products?.items?.[0];
     const description =
       product?.short_description?.html?.replace(/<[^>]*>/g, "") || "";
-    const imageUrl = product?.small_image?.url;
+    const imageUrl = proxyMagentoImage(product?.small_image?.url);
     return {
       title: product?.name || "Product",
       description,
@@ -163,7 +164,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // Extract special attributes from specs
   const mfgSku = specs.find((s) => s.code === "manufacturer_sku")?.value || null;
   const sdsUrl = specs.find((s) => s.code === "sds")?.value || null;
-  const MEDIA_URL = process.env.NEXT_PUBLIC_MAGENTO_MEDIA_URL || "https://magento.test/media";
+  // SDS document URLs also route through our media proxy for auth
+  const sdsProxy = (url: string) =>
+    url.startsWith("http") ? proxyMagentoImage(url) : `/api/media/${url.replace(/^\//, "")}`;
 
   // Fetch sibling products from same category for "You May Also Like"
   let categoryProducts: any[] = [];
@@ -217,7 +220,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const documents: { label: string; url: string; type: string }[] = [];
   if (sdsUrl) {
     // Handle both full URLs and relative paths
-    const fullSdsUrl = sdsUrl.startsWith("http") ? sdsUrl : `${MEDIA_URL}/${sdsUrl.replace(/^\//, "")}`;
+    const fullSdsUrl = sdsProxy(sdsUrl);
     documents.push({ label: "Safety Data Sheet (SDS)", url: fullSdsUrl, type: "SDS" });
   }
   // Future: add more document types here from other attributes
@@ -286,7 +289,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           "@type": "Product",
           name: product.name,
           sku: product.sku,
-          image: product.media_gallery?.[0]?.url || product.small_image?.url,
+          image: proxyMagentoImage(product.media_gallery?.[0]?.url || product.small_image?.url),
           description:
             product.short_description?.html?.replace(/<[^>]*>/g, "") || "",
           brand: brandLabel
@@ -562,7 +565,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div className="mb-6 flex flex-wrap gap-5 text-[13px]">
               {sdsUrl && (
                 <a
-                  href={sdsUrl.startsWith("http") ? sdsUrl : `${MEDIA_URL}/${sdsUrl.replace(/^\//, "")}`}
+                  href={sdsProxy(sdsUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-red-600 transition hover:text-red-700"
@@ -585,7 +588,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   url_key: product.url_key,
                   name: product.name,
                   sku: product.sku,
-                  image_url: product.small_image?.url || "",
+                  image_url: proxyMagentoImage(product.small_image?.url) || "",
                   price: finalPrice,
                   currency: priceData?.final_price?.currency || "USD",
                   stock_status: product.stock_status,
@@ -773,7 +776,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             url_key: product.url_key,
             name: product.name,
             sku: product.sku,
-            image_url: product.small_image?.url || "",
+            image_url: proxyMagentoImage(product.small_image?.url) || "",
             price: finalPrice,
             currency: priceData?.final_price?.currency || "USD",
             manufacturer: brandLabel,

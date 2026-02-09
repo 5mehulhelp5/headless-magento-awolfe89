@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getRecentlyViewed, type RecentProduct } from "@/lib/recentlyViewed";
 import { formatPrice } from "@/lib/formatPrice";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 interface Props {
   /** Exclude current product from the list */
@@ -44,7 +45,7 @@ export function RecentlyViewed({ excludeUrlKey, maxItems = 6 }: Props) {
           >
             <div className="relative aspect-square bg-gray-50">
               <Image
-                src={item.image_url}
+                src={proxyMagentoImage(item.image_url)}
                 alt={item.name}
                 fill
                 className="object-contain p-2 transition group-hover:scale-105"

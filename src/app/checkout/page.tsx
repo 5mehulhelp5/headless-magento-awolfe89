@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
- 
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { getCartToken, clearCartToken } from "@/lib/cart/cartToken";
 import { isLoggedIn } from "@/lib/auth/token";
@@ -738,7 +738,7 @@ export default function CheckoutPage() {
                     <div key={item.uid} className="flex gap-3 px-4 py-3">
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                         <Image
-                          src={item.product.small_image.url}
+                          src={proxyMagentoImage(item.product.small_image.url)}
                           alt={item.product.small_image.label || item.product.name}
                           fill
                           className="object-contain p-0.5"

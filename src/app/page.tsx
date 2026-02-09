@@ -7,6 +7,7 @@ import { BLOG_POSTS_QUERY } from "@/lib/graphql/queries/blog";
 import { ProductCard } from "@/components/product/ProductCard";
 import { BlogPostCard } from "@/components/blog/BlogPostCard";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -276,7 +277,7 @@ export default async function HomePage() {
                   >
                     {brand.image ? (
                       <Image
-                        src={brand.image}
+                        src={proxyMagentoImage(brand.image)}
                         alt={brand.name}
                         width={40}
                         height={40}

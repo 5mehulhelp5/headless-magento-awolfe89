@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 import { sanitizeHtml } from "@/lib/cms/parseDirectives";
 import {
   getCompareProducts,
@@ -176,7 +177,7 @@ export default function ComparePage() {
                           <Link href={`/product/${product.url_key}`}>
                             <div className="relative mx-auto mb-3 h-28 w-28">
                               <Image
-                                src={product.small_image?.url}
+                                src={proxyMagentoImage(product.small_image?.url)}
                                 alt={product.name}
                                 fill
                                 className="object-contain"

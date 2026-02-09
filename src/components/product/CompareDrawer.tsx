@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 import {
   getCompareProducts,
   removeFromCompare,
@@ -45,7 +46,7 @@ export function CompareDrawer() {
             >
               <div className="relative h-8 w-8 overflow-hidden rounded bg-white">
                 <Image
-                  src={item.image_url}
+                  src={proxyMagentoImage(item.image_url)}
                   alt={item.name}
                   fill
                   className="object-contain"

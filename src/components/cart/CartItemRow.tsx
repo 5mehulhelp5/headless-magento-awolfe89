@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/formatPrice";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 import { useMutation } from "@apollo/client/react";
 import {
   UPDATE_CART_ITEMS,
@@ -75,7 +76,7 @@ export function CartItemRow({ item, cartId }: CartItemRowProps) {
       <div className="col-span-6 flex gap-4">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
           <Image
-            src={item.product.small_image.url}
+            src={proxyMagentoImage(item.product.small_image.url)}
             alt={item.product.small_image.label || item.product.name}
             fill
             className="object-contain p-1"

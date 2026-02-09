@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useRef, useCallback } from "react";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 interface GalleryImage {
   url: string;
@@ -29,7 +30,8 @@ export function ProductGallery({
 }: ProductGalleryProps) {
   const activeImages = images
     .filter((img) => !img.disabled)
-    .sort((a, b) => a.position - b.position);
+    .sort((a, b) => a.position - b.position)
+    .map((img) => ({ ...img, url: proxyMagentoImage(img.url) }));
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [zooming, setZooming] = useState(false);

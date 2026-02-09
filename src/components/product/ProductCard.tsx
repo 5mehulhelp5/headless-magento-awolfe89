@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { QuickAddToCart } from "@/components/cart/QuickAddToCart";
 import { formatPrice } from "@/lib/formatPrice";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%23f3f4f6' width='400' height='400'/%3E%3Cg transform='translate(150,160)'%3E%3Cpath d='M50 0L93.3 25v50L50 100 6.7 75V25z' fill='none' stroke='%23d1d5db' stroke-width='2'/%3E%3Cpath d='M50 20L73.3 33.3v26.7L50 73.3 26.7 60V33.3z' fill='none' stroke='%23d1d5db' stroke-width='1.5'/%3E%3Ccircle cx='50' cy='46' r='8' fill='none' stroke='%23d1d5db' stroke-width='1.5'/%3E%3C/g%3E%3Ctext x='200' y='240' text-anchor='middle' fill='%239ca3af' font-family='system-ui' font-size='13'%3ENo Image%3C/text%3E%3C/svg%3E";
 
@@ -36,7 +37,7 @@ export function ProductCard({ product, brandLabel }: ProductCardProps) {
   const hasDiscount = discount && discount.percent_off > 0;
   const imgSrc = isPlaceholder(product.small_image?.url)
     ? PLACEHOLDER_IMAGE
-    : product.small_image.url;
+    : proxyMagentoImage(product.small_image.url);
   const isOutOfStock = product.stock_status === "OUT_OF_STOCK";
   const isAvailableToOrder = product.stock_status === "AVAILABLE_TO_ORDER";
 

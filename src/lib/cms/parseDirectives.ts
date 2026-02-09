@@ -1,13 +1,10 @@
-const MEDIA_URL =
-  process.env.NEXT_PUBLIC_MAGENTO_MEDIA_URL || "https://magento.test/media";
-
 export function parseDirectives(html: string): string {
   let output = html;
 
-  // {{media url="wysiwyg/image.jpg"}} → full media URL
+  // {{media url="wysiwyg/image.jpg"}} → proxy URL (handles HTTP auth)
   output = output.replace(
     /\{\{media\s+url="([^"]+)"\}\}/g,
-    (_, path) => `${MEDIA_URL}/${path}`,
+    (_, path) => `/api/media/${path}`,
   );
 
   // {{store url="some/path"}} → relative link

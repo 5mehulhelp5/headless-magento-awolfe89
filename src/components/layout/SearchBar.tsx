@@ -7,6 +7,7 @@ import { SEARCH_SUGGESTIONS_QUERY } from "@/lib/graphql/queries/search";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/lib/formatPrice";
+import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
 
 interface SuggestionProduct {
   uid: string;
@@ -171,7 +172,7 @@ export function SearchBar() {
                 {products.map((product, idx) => {
                   const price =
                     product.price_range?.minimum_price?.final_price?.value;
-                  const imageUrl = product.small_image?.url;
+                  const imageUrl = proxyMagentoImage(product.small_image?.url);
 
                   return (
                     <Link
