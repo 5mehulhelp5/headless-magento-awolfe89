@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
-import { getMagentoHttpAuthHeaders } from "@/lib/magento/httpAuth";
+import { getMagentoHttpAuth, getMagentoHttpAuthHeaders } from "@/lib/magento/httpAuth";
 
 const MAGENTO_GRAPHQL_URL = process.env.MAGENTO_GRAPHQL_URL!;
 
@@ -52,10 +52,15 @@ export async function POST(request: NextRequest) {
     ...getMagentoHttpAuthHeaders(),
   };
 
-  // Forward auth token for customer operations
+  // Forward customer Bearer tokens (but NOT staging Basic auth from browser).
+  // When HTTP auth is configured, combine Basic + Bearer so nginx and Magento
+  // both get what they need.
   const authorization = request.headers.get("authorization");
-  if (authorization) {
-    headers["Authorization"] = authorization;
+  if (authorization?.startsWith("Bearer ")) {
+    const httpAuth = getMagentoHttpAuth();
+    headers["Authorization"] = httpAuth
+      ? `${httpAuth}, ${authorization}`
+      : authorization;
   }
 
   // Forward store code header
@@ -70,7 +75,17 @@ export async function POST(request: NextRequest) {
     body,
   });
 
-  const data = await response.json();
+  // Guard against non-JSON responses (e.g. HTML error pages from nginx)
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return NextResponse.json(
+      { errors: [{ message: `Magento returned ${response.status}` }] },
+      { status: 502 },
+    );
+  }
 
   return NextResponse.json(data, {
     headers: {
