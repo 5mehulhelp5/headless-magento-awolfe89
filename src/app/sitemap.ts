@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getMagentoHttpAuthHeaders } from "@/lib/magento/httpAuth";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://technimark.com";
 const MAGENTO_GRAPHQL_URL = process.env.MAGENTO_GRAPHQL_URL!;
@@ -6,7 +7,7 @@ const MAGENTO_GRAPHQL_URL = process.env.MAGENTO_GRAPHQL_URL!;
 async function gqlFetch(query: string, variables: Record<string, unknown> = {}) {
   const res = await fetch(MAGENTO_GRAPHQL_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getMagentoHttpAuthHeaders() },
     body: JSON.stringify({ query, variables }),
   });
   const json = await res.json();

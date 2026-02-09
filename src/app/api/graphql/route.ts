@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { getMagentoHttpAuthHeaders } from "@/lib/magento/httpAuth";
 
 const MAGENTO_GRAPHQL_URL = process.env.MAGENTO_GRAPHQL_URL!;
 
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...getMagentoHttpAuthHeaders(),
   };
 
   // Forward auth token for customer operations

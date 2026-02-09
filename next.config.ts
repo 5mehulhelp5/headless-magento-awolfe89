@@ -1,11 +1,19 @@
 import type { NextConfig } from "next";
 
+const magentoHost = (() => {
+  try {
+    return new URL(process.env.MAGENTO_BASE_URL || "https://magento.test").hostname;
+  } catch {
+    return "magento.test";
+  }
+})();
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "magento.test",
+        hostname: magentoHost,
       },
     ],
   },

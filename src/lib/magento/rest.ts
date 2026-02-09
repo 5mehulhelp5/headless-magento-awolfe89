@@ -3,6 +3,8 @@
  * Uses admin credentials to generate a bearer token, then caches it.
  */
 
+import { getMagentoHttpAuth } from "@/lib/magento/httpAuth";
+
 const MAGENTO_BASE = (
   process.env.MAGENTO_GRAPHQL_URL || "https://magento.test/graphql"
 ).replace(/\/graphql$/, "");
@@ -22,9 +24,13 @@ async function getAdminToken(): Promise<string> {
     throw new Error("MAGENTO_ADMIN_USER / MAGENTO_ADMIN_PASS not set");
   }
 
+  const httpAuth = getMagentoHttpAuth();
   const res = await fetch(`${MAGENTO_BASE}/rest/V1/integration/admin/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(httpAuth ? { Authorization: httpAuth } : {}),
+    },
     body: JSON.stringify({ username: user, password: pass }),
   });
 
@@ -46,9 +52,14 @@ export async function magentoRestGet<T = unknown>(
   endpoint: string,
 ): Promise<T> {
   const token = await getAdminToken();
+  const httpAuth = getMagentoHttpAuth();
   const res = await fetch(`${MAGENTO_BASE}/rest/V1${endpoint}`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      // When HTTP auth is configured, send both as comma-separated value.
+      // nginx consumes the Basic part; Magento receives the Bearer part.
+      Authorization: httpAuth
+        ? `${httpAuth}, Bearer ${token}`
+        : `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     next: { revalidate: 300 }, // cache for 5 min
@@ -69,10 +80,13 @@ export async function magentoRestPost<T = unknown>(
   body: unknown,
 ): Promise<T> {
   const token = await getAdminToken();
+  const httpAuth2 = getMagentoHttpAuth();
   const res = await fetch(`${MAGENTO_BASE}/rest/V1${endpoint}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: httpAuth2
+        ? `${httpAuth2}, Bearer ${token}`
+        : `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
