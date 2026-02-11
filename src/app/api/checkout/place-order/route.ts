@@ -135,20 +135,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Log sanitized payload for debugging
-  const debugPayload = {
-    ...payload,
-    paymentMethod: {
-      ...payload.paymentMethod,
-      additional_data: payload.paymentMethod.additional_data
-        ? {
-            ...payload.paymentMethod.additional_data,
-            cc_number: "****",
-            cc_cid: "***",
-            grecaptcha_response: payload.paymentMethod.additional_data.grecaptcha_response ? "[present]" : "[missing]",
-          }
-        : undefined,
-    },
-  };
+  const debugPayload = JSON.parse(JSON.stringify(payload));
+  if (debugPayload.paymentMethod?.additional_data) {
+    debugPayload.paymentMethod.additional_data.cc_number = "****";
+    debugPayload.paymentMethod.additional_data.cc_cid = "***";
+    debugPayload.paymentMethod.additional_data.grecaptcha_response =
+      debugPayload.paymentMethod.additional_data.grecaptcha_response ? "[present]" : "[missing]";
+  }
   console.log("[place-order] Endpoint:", endpoint);
   console.log("[place-order] Payload:", JSON.stringify(debugPayload, null, 2));
 
