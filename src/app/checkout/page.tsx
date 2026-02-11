@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { proxyMagentoImage } from "@/lib/magento/mediaUrl";
@@ -46,7 +46,8 @@ import {
 } from "@/lib/shipping/carrierAccounts";
 import Link from "next/link";
 
-/* ─── reCAPTCHA disabled — Magento config has "require at checkout" = No ─── */
+/* ─── reCAPTCHA config (from Sage payment module) ─── */
+const RECAPTCHA_SITE_KEY = "6LdGiowrAAAAAEFozB4BsInwJ3DU1qqe-9pigMk8";
 
 /* ─── Types ─── */
 
@@ -141,6 +142,12 @@ export default function CheckoutPage() {
     ccType: "unknown",
   });
 
+  // reCAPTCHA state (required by Sage payment module)
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaWidgetId = useRef<number | null>(null);
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+
   const [customerLoggedIn, setCustomerLoggedIn] = useState(false);
 
   // PO Number & Carrier account state
@@ -158,6 +165,35 @@ export default function CheckoutPage() {
     setCustomerLoggedIn(isLoggedIn());
   }, []);
 
+  // Load reCAPTCHA script
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).grecaptcha?.render) {
+      setRecaptchaReady(true);
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).onRecaptchaLoad = () => setRecaptchaReady(true);
+    const script = document.createElement("script");
+    script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
+
+  // Render reCAPTCHA widget when ready and CC method selected
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grecaptcha = (window as any).grecaptcha;
+    if (!recaptchaReady || !grecaptcha?.render || !recaptchaRef.current) return;
+    if (recaptchaWidgetId.current !== null) return;
+    recaptchaWidgetId.current = grecaptcha.render(recaptchaRef.current, {
+      sitekey: RECAPTCHA_SITE_KEY,
+      callback: (token: string) => setRecaptchaToken(token),
+      "expired-callback": () => setRecaptchaToken(""),
+    });
+  }, [recaptchaReady, addressSaved, selectedPayment]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, loading: cartLoading } = useQuery<any>(CHECKOUT_CART_QUERY, {
@@ -378,6 +414,10 @@ export default function CheckoutPage() {
         setError(ccError);
         return;
       }
+      if (!recaptchaToken) {
+        setError("Please complete the reCAPTCHA verification");
+        return;
+      }
     }
 
     setPlacing(true);
@@ -411,7 +451,7 @@ export default function CheckoutPage() {
                 cc_owner: `${billingAddr.firstname} ${billingAddr.lastname}`,
                 sage_pmnt_meth_option: "",
                 new_use_bill_addr: "1",
-                grecaptcha_response: "",
+                grecaptcha_response: recaptchaToken,
               },
             },
             billingAddress: {
@@ -500,6 +540,13 @@ export default function CheckoutPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");
       setPlacing(false);
+      // Reset reCAPTCHA so user can retry
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (recaptchaWidgetId.current !== null && (window as any).grecaptcha) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).grecaptcha.reset(recaptchaWidgetId.current);
+        setRecaptchaToken("");
+      }
     }
   }
 
@@ -519,7 +566,8 @@ export default function CheckoutPage() {
     (ccData.ccNumber.replace(/\D/g, "").length >= 13 &&
       ccData.ccExpMonth &&
       ccData.ccExpYear &&
-      ccData.ccCvv.length >= 3);
+      ccData.ccCvv.length >= 3 &&
+      recaptchaToken);
 
   const carrierValid =
     !isShipOnMyAccount || !!carrierData.accountNumber;
@@ -908,7 +956,12 @@ export default function CheckoutPage() {
 
                       {/* Credit card form — shown when CC method is selected */}
                       {isCcMethod && (
-                        <CreditCardForm data={ccData} onChange={setCcData} />
+                        <>
+                          <CreditCardForm data={ccData} onChange={setCcData} />
+                          <div className="mt-4">
+                            <div ref={recaptchaRef} />
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
