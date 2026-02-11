@@ -588,6 +588,20 @@ export default function CheckoutPage() {
     ccValid &&
     carrierValid;
 
+  // Debug: log what's blocking Place Order
+  if (addressSaved && !canPlaceOrder) {
+    console.log("[Checkout] Place Order blocked:", {
+      selectedShipping: !!selectedShipping,
+      formComplete: !!(form.email && form.firstname && form.lastname && form.street0 && form.city && form.region && form.postcode && form.telephone),
+      billingValid: !!billingValid,
+      ccValid: !!ccValid,
+      carrierValid: !!carrierValid,
+      isCcMethod,
+      effectivePayment,
+      recaptchaToken: !!recaptchaToken,
+    });
+  }
+
   // ─── Render ───
 
   if (!cartId || (!cartLoading && !data?.cart?.items?.length)) {
@@ -1143,7 +1157,7 @@ export default function CheckoutPage() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (tax: any) => (
                       <div key={tax.label} className="flex justify-between">
-                        <span className="text-gray-500">{tax.label}</span>
+                        <span className="text-gray-500">Tax</span>
                         <span className="font-medium text-gray-900">
                           ${formatPrice(tax.amount.value)}
                         </span>
