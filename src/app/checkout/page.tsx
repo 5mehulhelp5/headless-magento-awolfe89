@@ -47,7 +47,7 @@ import {
 import Link from "next/link";
 
 /* ─── reCAPTCHA config (from Sage payment module) ─── */
-const RECAPTCHA_SITE_KEY = "6LdGiowrAAAAAEFozB4BsInwJ3DU1qqe-9pigMk8";
+const RECAPTCHA_SITE_KEY = "6LdnJmgsAAAAABxtxQ6aJrNsJLe9MAAm7MmTNJvy";
 
 /* ─── Types ─── */
 
