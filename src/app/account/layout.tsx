@@ -27,14 +27,35 @@ export default function AccountLayout({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = getCustomerToken();
-    if (!token) {
-      router.replace("/customer/login");
-      return;
+    function checkAuth() {
+      const token = getCustomerToken();
+      if (token) {
+        setReady(true);
+      } else {
+        // Small delay to avoid redirect race during login navigation
+        const timer = setTimeout(() => {
+          if (!getCustomerToken()) {
+            router.replace("/customer/login");
+          } else {
+            setReady(true);
+          }
+        }, 100);
+        return timer;
+      }
     }
-    // Deferred to avoid synchronous setState in effect body
-    const id = requestAnimationFrame(() => setReady(true));
-    return () => cancelAnimationFrame(id);
+
+    const timer = checkAuth();
+
+    // Re-check when auth state changes (e.g., login just set the token)
+    function onAuthChange() {
+      if (getCustomerToken()) setReady(true);
+    }
+    window.addEventListener("auth-change", onAuthChange);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("auth-change", onAuthChange);
+    };
   }, [router]);
 
   function handleSignOut() {
