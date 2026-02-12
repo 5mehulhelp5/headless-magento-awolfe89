@@ -19,6 +19,7 @@ interface PlaceOrderBody {
     lastname: string;
     street: string[];
     city: string;
+    region?: string;
     region_code: string;
     region_id?: number;
     postcode: string;
@@ -86,10 +87,9 @@ export async function POST(request: NextRequest) {
       lastname: billingAddress.lastname,
       street: billingAddress.street,
       city: billingAddress.city,
+      region: billingAddress.region || billingAddress.region_code,
       region_code: billingAddress.region_code,
-      ...(billingAddress.region_id
-        ? { region_id: billingAddress.region_id }
-        : {}),
+      region_id: billingAddress.region_id || 0,
       postcode: billingAddress.postcode,
       country_id: billingAddress.country_id,
       telephone: billingAddress.telephone,
@@ -177,7 +177,16 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: message, details },
+        {
+          error: message,
+          details,
+          _debug: {
+            flow: customerToken ? "customer" : "guest",
+            endpoint: endpoint.replace(MAGENTO_BASE, ""),
+            magentoStatus: res.status,
+            rawError: errorText.slice(0, 1000),
+          },
+        },
         { status: res.status },
       );
     }
