@@ -335,7 +335,6 @@ export default function CheckoutPage() {
       const methods: ShippingMethod[] =
         shippingData?.setShippingAddressesOnCart?.cart?.shipping_addresses?.[0]
           ?.available_shipping_methods || [];
-      console.log("[Checkout] Available shipping methods:", methods.map((m) => `${m.carrier_code}|${m.method_code} (${m.carrier_title})`));
       setShippingMethods(methods.filter((m: ShippingMethod) => m.available));
       setAddressSaved(true);
 
@@ -487,12 +486,7 @@ export default function CheckoutPage() {
 
         const result = await res.json();
         if (!res.ok) {
-          console.error("[Checkout] Place order error:", result);
-          throw new Error(
-            result.details
-              ? `${result.error} — ${result.details}`
-              : result.error || "Failed to place order",
-          );
+          throw new Error(result.error || "Failed to place order");
         }
 
         // Save new carrier account if requested
@@ -604,20 +598,6 @@ export default function CheckoutPage() {
     billingValid &&
     ccValid &&
     carrierValid;
-
-  // Debug: log what's blocking Place Order
-  if (addressSaved && !canPlaceOrder) {
-    console.log("[Checkout] Place Order blocked:", {
-      selectedShipping: !!selectedShipping,
-      formComplete: !!(form.email && form.firstname && form.lastname && form.street0 && form.city && form.region && form.postcode && form.telephone),
-      billingValid: !!billingValid,
-      ccValid: !!ccValid,
-      carrierValid: !!carrierValid,
-      isCcMethod,
-      effectivePayment,
-      recaptchaToken: !!recaptchaToken,
-    });
-  }
 
   // ─── Render ───
 

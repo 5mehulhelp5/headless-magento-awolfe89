@@ -161,34 +161,16 @@ export async function POST(request: NextRequest) {
 
       // Try to parse Magento error message
       let message = "Failed to place order. Please try again.";
-      let details: string | undefined;
       try {
         const parsed = JSON.parse(errorText);
         if (parsed.message) {
           message = parsed.message;
         }
-        // Magento sometimes includes parameters or trace
-        if (parsed.parameters) {
-          details = JSON.stringify(parsed.parameters);
-        }
       } catch {
-        // Non-JSON response — include raw text
-        if (errorText) details = errorText.slice(0, 500);
+        // Use generic message
       }
 
-      return NextResponse.json(
-        {
-          error: message,
-          details,
-          _debug: {
-            flow: customerToken ? "customer" : "guest",
-            endpoint: endpoint.replace(MAGENTO_BASE, ""),
-            magentoStatus: res.status,
-            rawError: errorText.slice(0, 1000),
-          },
-        },
-        { status: res.status },
-      );
+      return NextResponse.json({ error: message }, { status: res.status });
     }
 
     // Magento returns the order ID (number) as a plain integer on success
