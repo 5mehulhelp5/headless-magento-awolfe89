@@ -73,13 +73,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Build sage_comment from carrier info (if present)
+  const sageComment = carrierInfo?.accountNumber
+    ? `Ship on Customer Account: ${(carrierInfo.carrier || "OTHER").toUpperCase()} #${carrierInfo.accountNumber}`
+    : "";
+
   // Build the Magento REST payload
   // https://developer.adobe.com/commerce/webapi/rest/tutorials/orders/order-create-order/
+  const extensionAttributes: Record<string, string> = {};
+  if (poNumber) extensionAttributes.sage_po_number = poNumber;
+  if (sageComment) extensionAttributes.sage_comment = sageComment;
+
   const payload: Record<string, unknown> = {
     paymentMethod: {
       method: paymentMethod.code,
       ...(paymentMethod.additional_data
         ? { additional_data: paymentMethod.additional_data }
+        : {}),
+      ...(Object.keys(extensionAttributes).length > 0
+        ? { extension_attributes: extensionAttributes }
         : {}),
     },
     billingAddress: {

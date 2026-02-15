@@ -246,14 +246,26 @@ export default function CheckoutPage() {
   }, [customerData]);
 
   // Load saved carrier accounts (API for logged-in, localStorage for guests)
+  // Auto-select the first saved account so it pre-populates at checkout
   useEffect(() => {
+    const selectFirst = (accounts: SavedCarrierAccount[]) => {
+      setSavedAccounts(accounts);
+      if (accounts.length > 0) {
+        const first = accounts[0];
+        setCarrierData({
+          carrier: first.carrier,
+          accountNumber: first.accountNumber,
+          savedAccountId: first.id,
+        });
+      }
+    };
     if (customerLoggedIn) {
       const token = getCustomerToken();
       if (token) {
-        fetchSavedAccounts(token).then(setSavedAccounts).catch(() => {});
+        fetchSavedAccounts(token).then(selectFirst).catch(() => {});
       }
     } else {
-      setSavedAccounts(getLocalAccounts());
+      selectFirst(getLocalAccounts());
     }
   }, [customerLoggedIn]);
 
@@ -515,6 +527,23 @@ export default function CheckoutPage() {
           },
         });
 
+        // Save PO/carrier to quote BEFORE placing order so they
+        // appear in the Magento order email (quote→order observer copies them)
+        if (poNumber || (isShipOnMyAccount && carrierData.accountNumber)) {
+          await fetch("/api/checkout/save-quote-fields", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              cartId,
+              customerToken: getCustomerToken() || undefined,
+              poNumber: poNumber || undefined,
+              carrierInfo: isShipOnMyAccount
+                ? { carrier: carrierData.carrier, accountNumber: carrierData.accountNumber }
+                : undefined,
+            }),
+          }).catch((err) => console.error("Failed to save quote fields:", err));
+        }
+
         await setPaymentMethod({
           variables: { cartId, paymentCode },
         });
@@ -525,7 +554,7 @@ export default function CheckoutPage() {
 
         const orderNumber = orderData?.placeOrder?.order?.order_number;
 
-        // Post PO + carrier info as order comment (best-effort)
+        // Also post as order comment (backup — visible in admin order history)
         const commentLines: string[] = [];
         if (poNumber) commentLines.push(`PO Number: ${poNumber}`);
         if (isShipOnMyAccount && carrierData.accountNumber) {

@@ -1,0 +1,181 @@
+<!--
+  Technimark Branded New Order Confirmation Email
+  Apply in Magento Admin: Marketing → Email Templates → Add New Template
+  Load "Magento_Sales / New Order" default, replace body with this, save as "Branded New Order"
+  Then set in Stores → Config → Sales → Sales Emails → Order → New Order Confirmation Email Template
+-->
+{{template config_path="design/email/header_template"}}
+
+<!-- Order Confirmed Badge -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:12px 24px;">
+            <span style="font-size:16px; font-weight:bold; color:#065f46;">&#10003; Order Confirmed</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- Order Number -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td align="center">
+      <p style="margin:0; font-size:14px; color:#6b7280;">
+        Order # <strong style="color:#111827;">{{var order.increment_id}}</strong>
+        &nbsp;&middot;&nbsp;
+        {{var order.getCreatedAtFormatted(2)}}
+      </p>
+    </td>
+  </tr>
+</table>
+
+<!-- Greeting -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td>
+      <p style="margin:0 0 12px 0; font-size:16px; color:#111827; line-height:1.5;">
+        Hello, {{var order.getCustomerName()}}
+      </p>
+      <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
+        Thank you for your order. We're processing it now and will notify you when it ships. Here's a summary of your order details.
+      </p>
+    </td>
+  </tr>
+</table>
+
+<!-- Customer Note (conditional) -->
+{{depend order.getEmailCustomerNote()}}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="background-color:#eff6ff; border-left:3px solid #3b82f6; padding:16px 20px; border-radius:0 4px 4px 0;">
+      <p style="margin:0 0 4px 0; font-size:12px; font-weight:bold; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px;">Note About Your Order</p>
+      <p style="margin:0; font-size:14px; color:#1e3a5f; line-height:1.5;">{{var order.getEmailCustomerNote()}}</p>
+    </td>
+  </tr>
+</table>
+{{/depend}}
+
+<!-- Divider -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="border-top:1px solid #e5e7eb; font-size:0; line-height:0; height:1px;">&nbsp;</td>
+  </tr>
+</table>
+
+<!-- Billing & Shipping Addresses — Two Column -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <!-- Billing Address -->
+    <td width="48%" valign="top" style="padding-right:12px;">
+      <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#111827; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #c8102e; padding-bottom:6px;">
+        Billing Address
+      </p>
+      <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
+        {{var formattedBillingAddress|raw}}
+      </p>
+    </td>
+    <!-- Gutter -->
+    <td width="4%">&nbsp;</td>
+    <!-- Shipping Address -->
+    <td width="48%" valign="top" style="padding-left:12px;">
+      <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#111827; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #c8102e; padding-bottom:6px;">
+        Shipping Address
+      </p>
+      <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
+        {{var formattedShippingAddress|raw}}
+      </p>
+    </td>
+  </tr>
+</table>
+
+<!-- Payment & Shipping Methods — Two Column -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <!-- Payment Method -->
+    <td width="48%" valign="top" style="padding-right:12px;">
+      <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#111827; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #c8102e; padding-bottom:6px;">
+        Payment Method
+      </p>
+      <div style="font-size:14px; color:#374151; line-height:1.6;">
+        {{var payment_html|raw}}
+      </div>
+    </td>
+    <!-- Gutter -->
+    <td width="4%">&nbsp;</td>
+    <!-- Shipping Method -->
+    <td width="48%" valign="top" style="padding-left:12px;">
+      <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#111827; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #c8102e; padding-bottom:6px;">
+        Shipping Method
+      </p>
+      <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
+        {{var order.getShippingDescription()}}
+      </p>
+      {{depend shipping_msg}}
+      <p style="margin:8px 0 0 0; font-size:13px; color:#6b7280; line-height:1.5;">
+        {{var shipping_msg}}
+      </p>
+      {{/depend}}
+    </td>
+  </tr>
+</table>
+
+<!-- PO Number (conditional) -->
+{{depend order.getSagePoNumber()}}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+  <tr>
+    <td style="background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:4px; padding:12px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="120" valign="top">
+            <p style="margin:0; font-size:13px; font-weight:bold; color:#111827;">PO Number:</p>
+          </td>
+          <td valign="top">
+            <p style="margin:0; font-size:14px; color:#374151;">{{var order.getSagePoNumber()}}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{{/depend}}
+
+<!-- Shipping Account / Comment (conditional) -->
+{{depend order.getSageComment()}}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+  <tr>
+    <td style="background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:4px; padding:12px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="140" valign="top">
+            <p style="margin:0; font-size:13px; font-weight:bold; color:#111827;">Shipping Account:</p>
+          </td>
+          <td valign="top">
+            <p style="margin:0; font-size:14px; color:#374151;">{{var order.getSageComment()}}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{{/depend}}
+
+<!-- Divider before items -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="border-top:1px solid #e5e7eb; font-size:0; line-height:0; height:1px;">&nbsp;</td>
+  </tr>
+</table>
+
+<!-- Order Items (Magento layout handle) -->
+<p style="margin:0 0 12px 0; font-size:13px; font-weight:bold; color:#111827; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #c8102e; padding-bottom:6px;">
+  Order Items
+</p>
+
+{{layout handle="sales_email_order_items" order=$order area="frontend"}}
+
+{{template config_path="design/email/footer_template"}}

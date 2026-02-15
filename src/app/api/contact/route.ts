@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { sendEmail } from "@/lib/email/resend";
+import { buildContactNotification } from "@/lib/email/templates/contactNotification";
+import { buildContactAutoReply } from "@/lib/email/templates/contactAutoReply";
 
 // 5 submissions per minute per IP
 const RATE_LIMIT = 5;
@@ -36,8 +39,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Wire to email service (Resend, SendGrid, etc.) for production
-    console.log("Contact form submission received at", new Date().toISOString());
+    // Send notification to sales team (fire-and-forget)
+    const notification = buildContactNotification({
+      name,
+      email,
+      phone,
+      company,
+      subject,
+      message,
+    });
+    sendEmail({
+      to: "sales@technimark-inc.com",
+      subject: notification.subject,
+      html: notification.html,
+      replyTo: email,
+    }).catch(() => {});
+
+    // Send auto-reply to customer (fire-and-forget)
+    const autoReply = buildContactAutoReply({ name });
+    sendEmail({
+      to: email,
+      subject: autoReply.subject,
+      html: autoReply.html,
+    }).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch {
