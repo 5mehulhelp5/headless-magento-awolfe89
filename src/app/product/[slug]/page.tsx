@@ -598,7 +598,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {/* ─── SHIPPING ESTIMATOR ─── */}
-            <ShippingEstimator price={finalPrice} freeShippingThreshold={freeShippingThreshold} />
+            <ShippingEstimator sku={product.sku} weight={product.weight ?? null} price={finalPrice} freeShippingThreshold={freeShippingThreshold} />
 
             {/* ─── PRODUCT INFO CHIPS ─── */}
             {(() => {

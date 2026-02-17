@@ -49,6 +49,35 @@ import Link from "next/link";
 /* ─── reCAPTCHA config (from Sage payment module) ─── */
 const RECAPTCHA_SITE_KEY = "6LdnJmgsAAAAABxtxQ6aJrNsJLe9MAAm7MmTNJvy";
 
+/* ─── Estimated delivery days (carriers don't return ETAs) ─── */
+const DELIVERY_DAYS: Record<string, Record<string, string>> = {
+  ups: {
+    GND: "3–5 days", "03": "3–5 days", GROUND: "3–5 days",
+    "3DS": "3 days", "12": "3 days",
+    "2DA": "2 days", "02": "2 days", "59": "2 days", "2DAM": "2 days",
+    "1DA": "1 day", "01": "1 day", "1DAS": "1–2 days", "13": "1–2 days",
+    "1DAE": "1 day", "14": "1 day",
+  },
+  fedex: {
+    FEDEX_GROUND: "3–5 days", GROUND_HOME_DELIVERY: "3–5 days",
+    FEDEX_EXPRESS_SAVER: "3 days", FEDEX_2_DAY: "2 days", FEDEX_2_DAY_AM: "2 days",
+    STANDARD_OVERNIGHT: "1 day", PRIORITY_OVERNIGHT: "1 day", FIRST_OVERNIGHT: "1 day",
+  },
+  usps: {
+    "1": "2–3 days", PRIORITY: "2–3 days",
+    "3": "1–2 days", EXPRESS: "1–2 days",
+    "4": "5–8 days", PARCEL: "5–8 days",
+  },
+};
+
+/** Known carrier codes that provide calculated rates */
+const RATE_CARRIERS = ["ups", "fedex", "usps"];
+
+function getDeliveryEstimate(carrierCode: string, methodCode: string): string {
+  const m = DELIVERY_DAYS[carrierCode];
+  return m?.[methodCode] || m?.[methodCode.toUpperCase()] || "";
+}
+
 /* ─── Types ─── */
 
 interface ShippingMethod {
@@ -132,6 +161,18 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
   const [addressSaved, setAddressSaved] = useState(false);
+
+  // EasyPost estimated rates (informational — shown alongside Magento shipping methods)
+  interface EstimatedRate {
+    carrier: string;
+    carrierTitle: string;
+    method: string;
+    methodTitle: string;
+    price: number;
+    estimatedDays: string;
+  }
+  const [estimatedRates, setEstimatedRates] = useState<EstimatedRate[]>([]);
+  const [estimatingRates, setEstimatingRates] = useState(false);
 
   // Credit card state
   const [ccData, setCcData] = useState<CreditCardData>({
@@ -269,6 +310,26 @@ export default function CheckoutPage() {
     }
   }, [customerLoggedIn]);
 
+  // Fetch EasyPost estimated rates when address is saved
+  useEffect(() => {
+    if (!addressSaved || !form.postcode || form.postcode.length < 5) return;
+    const totalQty = data?.cart?.total_quantity || 1;
+    setEstimatingRates(true);
+    fetch("/api/shipping/estimate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sku: "checkout",
+        qty: totalQty,
+        zipCode: form.postcode.slice(0, 5),
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((json) => setEstimatedRates(json.rates || []))
+      .catch(() => setEstimatedRates([]))
+      .finally(() => setEstimatingRates(false));
+  }, [addressSaved, form.postcode, data?.cart?.total_quantity]);
+
   // Mutations
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [setGuestEmail] = useMutation<any>(SET_GUEST_EMAIL);
@@ -382,13 +443,16 @@ export default function CheckoutPage() {
   }
 
   // Derived: is "Ship on My Account" selected?
-  const isShipOnMyAccount =
-    selectedShipping.startsWith("ups|") || selectedShipping.startsWith("flatrate|");
+  const isShipOnMyAccount = selectedShipping.startsWith("flatrate|");
 
-  // The underlying Magento carrier_code to use for "Ship on My Account"
-  // We pick whichever is available (ups preferred, flatrate fallback)
+  // The underlying Magento method for "Ship on My Account"
   const shipOnMyAccountMethod = shippingMethods.find(
-    (m) => m.carrier_code === "ups" || m.carrier_code === "flatrate",
+    (m) => m.carrier_code === "flatrate",
+  );
+
+  // Real carrier rates (ups, fedex, usps) with prices
+  const carrierRateMethods = shippingMethods.filter(
+    (m) => RATE_CARRIERS.includes(m.carrier_code) && m.amount.value > 0,
   );
 
   // Determine if the selected payment method requires credit card fields
@@ -840,7 +904,7 @@ export default function CheckoutPage() {
                   </h2>
                 </div>
                 <div className="divide-y divide-gray-100 p-2">
-                  {/* TBD / freeshipping option */}
+                  {/* Shipping Billed on Invoice (freeshipping) */}
                   {shippingMethods.some((m) => m.carrier_code === "freeshipping") && (() => {
                     const freeMethod = shippingMethods.find((m) => m.carrier_code === "freeshipping")!;
                     const key = `${freeMethod.carrier_code}|${freeMethod.method_code}`;
@@ -874,7 +938,94 @@ export default function CheckoutPage() {
                     );
                   })()}
 
-                  {/* Ship on My Account (consolidated ups + flatrate) */}
+                  {/* Carrier-calculated shipping rates from Magento (UPS, FedEx, USPS) */}
+                  {carrierRateMethods.length > 0 && (
+                    <div className="py-1">
+                      <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.5px] text-gray-400">
+                        Shipping Options
+                      </p>
+                      {carrierRateMethods.map((method) => {
+                        const key = `${method.carrier_code}|${method.method_code}`;
+                        const isSelected = selectedShipping === key;
+                        const eta = getDeliveryEstimate(method.carrier_code, method.method_code);
+                        return (
+                          <label
+                            key={key}
+                            className={`flex cursor-pointer items-center gap-4 rounded-lg px-4 py-2.5 transition ${
+                              isSelected
+                                ? "bg-red-50/50 ring-1 ring-red-200"
+                                : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="shipping"
+                              value={key}
+                              checked={isSelected}
+                              onChange={() => handleShippingMethodChange(key)}
+                              className="h-4 w-4 accent-red-600"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {method.carrier_title} {method.method_title}
+                              </p>
+                              {eta && (
+                                <p className="text-xs text-gray-400">
+                                  Est. {eta}
+                                </p>
+                              )}
+                            </div>
+                            <span className="shrink-0 text-sm font-semibold text-gray-900">
+                              ${formatPrice(method.amount.value)}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* EasyPost estimated rates (informational — shown when no Magento carrier rates) */}
+                  {carrierRateMethods.length === 0 && estimatedRates.length > 0 && (
+                    <div className="border-t border-gray-100 px-4 py-3">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.5px] text-gray-400">
+                        Estimated Shipping Costs
+                      </p>
+                      <div className="space-y-1.5">
+                        {estimatedRates.slice(0, 5).map((rate) => (
+                          <div
+                            key={`${rate.carrier}-${rate.method}`}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <span className="text-gray-600">
+                              {rate.carrierTitle} {rate.methodTitle}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              {rate.estimatedDays && (
+                                <span className="text-gray-400">{rate.estimatedDays}</span>
+                              )}
+                              <span className="font-semibold text-gray-900">
+                                ${formatPrice(rate.price)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] text-gray-400">
+                        Estimates based on order weight. Actual cost billed on invoice.
+                      </p>
+                    </div>
+                  )}
+                  {carrierRateMethods.length === 0 && estimatingRates && (
+                    <div className="flex items-center gap-2 border-t border-gray-100 px-4 py-3 text-xs text-gray-400">
+                      <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Estimating shipping costs...
+                    </div>
+                  )}
+
+                  {/* Ship on My Account (flatrate) */}
                   {shipOnMyAccountMethod && (() => {
                     const key = `${shipOnMyAccountMethod.carrier_code}|${shipOnMyAccountMethod.method_code}`;
                     return (
@@ -922,7 +1073,7 @@ export default function CheckoutPage() {
 
                   {/* Fallback: any other methods not covered above */}
                   {shippingMethods
-                    .filter((m) => !["freeshipping", "ups", "flatrate"].includes(m.carrier_code))
+                    .filter((m) => !["freeshipping", "flatrate", ...RATE_CARRIERS].includes(m.carrier_code))
                     .map((method) => {
                       const key = `${method.carrier_code}|${method.method_code}`;
                       const isSelected = selectedShipping === key;

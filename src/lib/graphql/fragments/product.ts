@@ -38,6 +38,7 @@ export const PRODUCT_FIELDS = gql`
 export const PRODUCT_DETAIL_FIELDS = gql`
   fragment ProductDetailFields on ProductInterface {
     ...ProductFields
+    weight
     description {
       html
     }
