@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send notification to sales team (fire-and-forget)
+    // Send notification to sales team
     const notification = buildContactNotification({
       name,
       email,
@@ -48,20 +48,28 @@ export async function POST(request: NextRequest) {
       subject,
       message,
     });
-    sendEmail({
+    const notifResult = await sendEmail({
       to: "sales@technimark-inc.com",
       subject: notification.subject,
       html: notification.html,
       replyTo: email,
-    }).catch(() => {});
+    });
 
-    // Send auto-reply to customer (fire-and-forget)
+    if (!notifResult.success) {
+      console.error("[contact] Failed to send notification:", notifResult.error);
+      return NextResponse.json(
+        { success: false, error: "Failed to send your message. Please try again or email us directly at sales@technimark-inc.com." },
+        { status: 500 },
+      );
+    }
+
+    // Send auto-reply to customer (best-effort, don't block on failure)
     const autoReply = buildContactAutoReply({ name });
     sendEmail({
       to: email,
       subject: autoReply.subject,
       html: autoReply.html,
-    }).catch(() => {});
+    }).catch((err) => console.error("[contact] Auto-reply failed:", err));
 
     return NextResponse.json({ success: true });
   } catch {
