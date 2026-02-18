@@ -69,8 +69,15 @@ export async function GET(request: NextRequest) {
       try {
         accounts = JSON.parse(attr.value);
       } catch {
+        console.warn(
+          `[carrier-accounts] Failed to parse for customer ${customer.id}: ${attr.value?.slice(0, 200)}`,
+        );
         accounts = [];
       }
+    } else {
+      console.log(
+        `[carrier-accounts] No saved_carrier_accounts attr for customer ${customer.id}`,
+      );
     }
 
     return NextResponse.json(accounts);
@@ -124,6 +131,11 @@ export async function PUT(request: NextRequest) {
       (a: { attribute_code: string }) => a.attribute_code !== ATTR_CODE,
     );
 
+    const newValue = JSON.stringify(body.accounts);
+    console.log(
+      `[carrier-accounts] Saving ${body.accounts.length} accounts for customer ${customer.id} (${newValue.length} chars)`,
+    );
+
     const putRes = await fetch(`${MAGENTO_BASE}/rest/V1/customers/me`, {
       method: "PUT",
       headers: buildHeaders(token),
@@ -138,7 +150,7 @@ export async function PUT(request: NextRequest) {
             ...existingAttrs,
             {
               attribute_code: ATTR_CODE,
-              value: JSON.stringify(body.accounts),
+              value: newValue,
             },
           ],
         },

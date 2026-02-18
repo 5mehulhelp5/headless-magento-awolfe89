@@ -199,6 +199,7 @@ export default function CheckoutPage() {
     savedAccountId: "",
   });
   const [savedAccounts, setSavedAccounts] = useState<SavedCarrierAccount[]>([]);
+  const [carrierAccountsLoaded, setCarrierAccountsLoaded] = useState(false);
   const [saveNewAccount, setSaveNewAccount] = useState(false);
 
   useEffect(() => {
@@ -291,6 +292,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const selectFirst = (accounts: SavedCarrierAccount[]) => {
       setSavedAccounts(accounts);
+      setCarrierAccountsLoaded(true);
       if (accounts.length > 0) {
         const first = accounts[0];
         setCarrierData({
@@ -303,7 +305,9 @@ export default function CheckoutPage() {
     if (customerLoggedIn) {
       const token = getCustomerToken();
       if (token) {
-        fetchSavedAccounts(token).then(selectFirst).catch(() => {});
+        fetchSavedAccounts(token).then(selectFirst).catch(() => {
+          // Don't mark as loaded so we don't overwrite on save
+        });
       }
     } else {
       selectFirst(getLocalAccounts());
@@ -461,7 +465,9 @@ export default function CheckoutPage() {
   const isCcMethod = effectivePayment === "cps_sagepayments";
 
   // Save a new carrier account (called after order placement)
+  // Only saves if we successfully loaded existing accounts to avoid overwriting them
   async function saveCarrierAccount() {
+    if (!carrierAccountsLoaded) return; // Don't save if initial load failed — prevents overwriting
     const newAcct: SavedCarrierAccount = {
       id: crypto.randomUUID(),
       carrier: carrierData.carrier,

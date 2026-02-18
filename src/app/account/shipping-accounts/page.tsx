@@ -41,7 +41,11 @@ export default function ShippingAccountsPage() {
 
   const loadAccounts = useCallback(async () => {
     const token = getCustomerToken();
-    if (!token) return;
+    if (!token) {
+      setError("Your session has expired. Please log in again to manage shipping accounts.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await fetchSavedAccounts(token);
@@ -132,8 +136,8 @@ export default function ShippingAccountsPage() {
     setSaving(false);
   }
 
-  // Loading skeleton
-  if (loading) {
+  // Loading skeleton (show error if session expired before loading finishes)
+  if (loading && !error) {
     return (
       <div className="space-y-6">
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">

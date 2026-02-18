@@ -25,13 +25,12 @@ function makeClient() {
   });
 
   // Error link: handle expired/invalid customer tokens
+  // Only trigger on Magento's explicit auth category, not loose string matching
+  // (cart merge and other operations can return "not authorized" without meaning the token is bad)
   const errorLink = new ErrorLink(({ error }) => {
     if (CombinedGraphQLErrors.is(error)) {
       const authError = error.errors.some(
-        (err) =>
-          err.extensions?.category === "graphql-authorization" ||
-          err.message.toLowerCase().includes("isn't authorized") ||
-          err.message.toLowerCase().includes("not authorized"),
+        (err) => err.extensions?.category === "graphql-authorization",
       );
       if (authError && getCustomerToken()) {
         clearCustomerToken();
